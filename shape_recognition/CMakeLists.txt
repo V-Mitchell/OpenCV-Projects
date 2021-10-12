@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+project( shape_recognition )
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( shape_recognition shape_recognition.cpp )
+target_link_libraries( shape_recognition ${OpenCV_LIBS} )
