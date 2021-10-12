@@ -8,17 +8,35 @@
 #include <opencv2/aruco.hpp>
 #include <iostream>
 
+void getCentroid(int& cx, int& cy, const std::vector<cv::Point2f>& bounds) {
+    cv::Moments M = cv::moments(bounds);
+    cx = M.m10/M.m00;
+    cy = M.m01/M.m00;
+}
+
 void setLabel(cv::Mat& im, const std::string label, const std::vector<cv::Point2f>& bounds) {
     int fontface = cv::FONT_HERSHEY_SIMPLEX;
-    double scale = 0.6;
+    double scale = 0.4;
     int thickness = 1;
     int baseline = 0;
 
-    cv::Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
+    int cx;
+    int cy;
+    getCentroid(cx, cy, bounds);
+    std::ostringstream out1, out2;
+
+    out1 << " ID: " << label;
+    out2 << "XY: " << cx << " " << cy;
+
+    cv::Size text = cv::getTextSize(out1.str(), fontface, scale, thickness, &baseline);
     cv::Rect r = cv::boundingRect(bounds);
 
     cv::rectangle(im, r.tl(), r.br(), CV_RGB(0, 206, 209), thickness);
-    cv::putText(im, label, r.br(), fontface, scale, CV_RGB(255,0,0), thickness, 8);
+    cv::putText(im, out1.str(), r.br(), fontface, scale, CV_RGB(255,0,0), thickness, 8);
+    cv::Point2i dy = r.br();
+    dy.y += (text.height + 2);
+    cv::putText(im, out2.str(), dy, fontface, scale, CV_RGB(255,0,0), thickness, 8);
+
 }
 
 int main(int argc, char* argv[]) {
