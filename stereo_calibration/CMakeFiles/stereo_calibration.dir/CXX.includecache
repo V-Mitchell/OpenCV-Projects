@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/victor-m/ocv3_ws/src/opencv-projects/stereo_calibration/stereo_calibration.cpp
+opencv2/core.hpp
+-
+opencv2/opencv.hpp
+-
+opencv2/calib3d/calib3d.hpp
+-
+opencv2/imgproc/imgproc.hpp
+-
+opencv2/highgui/highgui.hpp
+-
+opencv2/features2d/features2d.hpp
+-
+opencv2/imgcodecs.hpp
+-
+iostream
+-
+stdio.h
+-
+

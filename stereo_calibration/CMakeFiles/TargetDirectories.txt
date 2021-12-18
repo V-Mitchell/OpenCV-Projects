@@ -1,0 +1,3 @@
+/home/victor-m/ocv3_ws/src/opencv-projects/stereo_calibration/CMakeFiles/rebuild_cache.dir
+/home/victor-m/ocv3_ws/src/opencv-projects/stereo_calibration/CMakeFiles/edit_cache.dir
+/home/victor-m/ocv3_ws/src/opencv-projects/stereo_calibration/CMakeFiles/stereo_calibration.dir

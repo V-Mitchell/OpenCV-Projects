@@ -1,4 +1,4 @@
-# Install script for directory: /home/victor-m/cv_ws/src/opencv-projects/stereo_depth_perception
+# Install script for directory: /home/victor-m/ocv3_ws/src/opencv-projects/stereo_depth_perception
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/victor-m/cv_ws/src/opencv-projects/stereo_depth_perception/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/victor-m/ocv3_ws/src/opencv-projects/stereo_depth_perception/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
