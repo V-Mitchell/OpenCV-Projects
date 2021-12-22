@@ -15,7 +15,7 @@
 std::string gstreamerPipelineStr(int cap_width, int cap_height, int frame_rate, int cap_id) {
     return "nvarguscamerasrc sensor-id=" + std::to_string(cap_id)
         + " exposuretimerange='" + std::to_string(13000) + " " + std::to_string(100000000) + "' aelock=false"
-        + " gainrange='" + std::to_string(1) + " " + std::to_string(2.5) + "'"
+        + " gainrange='" + std::to_string(1) + " " + std::to_string(5) + "'"
         + " ispdigitalgainrange='" + std::to_string(1) + " " + std::to_string(1) + "'"
         + " aeantibanding=" + std::to_string(0) + " tnr-mode=" + std::to_string(1)
         + " tnr-strength=" + std::to_string(0.5) + " ee-mode=" + std::to_string(0)
@@ -29,12 +29,13 @@ std::string gstreamerPipelineStr(int cap_width, int cap_height, int frame_rate, 
 int main(int argc, char* argv[]) {
      // Print OpenCv build info
     std::cout << cv::getBuildInformation() << "\n" << std::endl;
+    cv::Size size(std::stoi(argv[1]), std::stoi(argv[2]));
 
     // camera feed setup
-    std::string pipeline = gstreamerPipelineStr(1280, 720, 20, 0);
+    std::string pipeline = gstreamerPipelineStr(size.width, size.height, 20, 0);
     std::cout << "// Left Cam Pipeline // " << pipeline << " //" << std::endl;
     cv::VideoCapture left_cam(pipeline, cv::CAP_GSTREAMER);
-    pipeline = gstreamerPipelineStr(1280, 720, 20, 1);
+    pipeline = gstreamerPipelineStr(size.width, size.height, 20, 1);
     std::cout << "// Right Cam Pipeline // " << pipeline << " //" << std::endl;
     cv::VideoCapture right_cam(pipeline, cv::CAP_GSTREAMER);
 
@@ -47,20 +48,15 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::string xml_file = argv[1];
-    xml_file += "calibration_images.xml";
-    cv::FileStorage fs(xml_file, cv::FileStorage::WRITE);
     std::vector<std::string> l_file, r_file;
-
     cv::Mat left_frame, right_frame;
     int i = 0;
     while(true) {
-
         bool left_success = left_cam.read(left_frame);
+        bool right_success = right_cam.read(right_frame);
         if (!left_success) {
             std::cout << "Left Camera Disconnected - Cannot read frame" << std::endl;
         }
-        bool right_success = right_cam.read(right_frame);
         if (!right_success) {
             std::cout << "Right Camera Disconnected - Cannot read frame" << std::endl;
         }
@@ -69,14 +65,14 @@ int main(int argc, char* argv[]) {
         cv::imshow("Right Frame", right_frame);
         if (cv::waitKey(5) == 32) { // Press 'Space' to capture image
             i++;
-            std::string file = argv[1];
+            std::string file = argv[3];
             file += "left/";
             file += std::to_string(i);
             file += "_left_frame.png";
             std::cout << "Saving " << file << std::endl;
             cv::imwrite(file, left_frame);
             l_file.push_back(file);
-            file = argv[1];
+            file = argv[3];
             file += "right/";
             file += std::to_string(i);
             file += "_right_frame.png";
@@ -89,6 +85,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    std::string xml_file = argv[3];
+    xml_file += "calibration_images.xml";
+    cv::FileStorage fs(xml_file, cv::FileStorage::WRITE);
+    fs << "image_size" << size;
     fs << "left_images" << l_file;
     fs << "right_images" << r_file;
     fs.release();

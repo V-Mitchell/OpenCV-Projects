@@ -35,7 +35,7 @@ void imgCalibrationPts( cv::Mat& img, cv::Size board_size,
             return;
         }
         cv::imshow("detected corners", draw);
-        cv::waitKey(); // wait till user presses key
+        //cv::waitKey(); // wait till user presses key
 
         obj_pts.push_back(obj_pt);
         img_pts.push_back(corners);
@@ -44,24 +44,29 @@ void imgCalibrationPts( cv::Mat& img, cv::Size board_size,
 }
 
 void applyStereoCalibration(std::string& xml_file, std::string& xml_calib, cv::Size& img_size) {
-    //cv::Mat l_map1, l_map2;
-    //cv::Mat r_map1, r_map2;
+    cv::Mat l_map1, l_map2;
+    cv::Mat r_map1, r_map2;
+    cv::Size new_size(img_size.height, img_size.width);
 
     cv::FileStorage fs(xml_calib, cv::FileStorage::READ);
     cv::Mat l_cameraMat, l_distCoeffs;
     cv::Mat r_cameraMat, r_distCoeffs;
+    cv::Mat l_rtR, l_rtP;
+    cv::Mat r_rtR, r_rtP;
     fs["left_camera_matrix"] >> l_cameraMat;
     fs["right_camera_matrix"] >> r_cameraMat;
     fs["left_dist_coeffs"] >> l_distCoeffs;
     fs["right_dist_coeffs"] >> r_distCoeffs;
+    fs["left_rectification_rotation_matrix"] >> l_rtR;
+    fs["right_rectification_rotation_matrix"] >> r_rtR;
+    fs["left_rectification_projection_matrix"] >> l_rtP;
+    fs["right_rectification_projection_matrix"] >> r_rtP;
     fs.release();
 
-    /*cv::initUndistortRectifyMap(l_cameraMat, l_distCoeffs, cv::Mat(),
-                                    cv::getOptimalNewCameraMatrix(l_cameraMat, l_distCoeffs, img_size, 1, img_size, 0),
-                                    img_size, CV_16SC2, l_map1, l_map2);
-    cv::initUndistortRectifyMap(r_cameraMat, r_distCoeffs, cv::Mat(),
-                                    cv::getOptimalNewCameraMatrix(r_cameraMat, r_distCoeffs, img_size, 1, img_size, 0),
-                                    img_size, CV_16SC2, r_map1, r_map2);*/
+    cv::initUndistortRectifyMap(l_cameraMat, l_distCoeffs, l_rtR, l_rtP,
+                                    new_size, CV_16SC2, l_map1, l_map2);
+    cv::initUndistortRectifyMap(r_cameraMat, r_distCoeffs, r_rtR, r_rtP,
+                                    new_size, CV_16SC2, r_map1, r_map2);
 
     fs.open(xml_file, cv::FileStorage::READ);
     std::vector<std::string> l_files, r_files;
@@ -97,11 +102,11 @@ void applyStereoCalibration(std::string& xml_file, std::string& xml_calib, cv::S
             return;
         }
 
-        //cv::remap(left_img, left_rimg, l_map1, l_map2, cv::INTER_LINEAR);
-        //cv::remap(right_img, right_rimg, r_map1, r_map2, cv::INTER_LINEAR);
+        cv::remap(left_img, left_rimg, l_map1, l_map2, cv::INTER_LINEAR);
+        cv::remap(right_img, right_rimg, r_map1, r_map2, cv::INTER_LINEAR);
 
-        cv::undistort(left_img, left_rimg, l_cameraMat, l_distCoeffs);
-        cv::undistort(right_img, right_rimg, r_cameraMat, r_distCoeffs);
+        //cv::undistort(left_img, left_rimg, l_cameraMat, l_distCoeffs);
+        //cv::undistort(right_img, right_rimg, r_cameraMat, r_distCoeffs);
 
         cv::imshow("original", left_img);
         cv::imshow("remapped", left_rimg);
@@ -113,10 +118,9 @@ void applyStereoCalibration(std::string& xml_file, std::string& xml_calib, cv::S
 }
 
 void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::string& xml_output) {
-    //Calibration Points
+    //Calibration points detected from calibration checkerboard
     std::vector<std::vector<cv::Point3f> > l_obj_pts, r_obj_pts;
     std::vector<std::vector<cv::Point2f> > l_img_pts, r_img_pts;
-    cv::Size img_size;
 
     std::vector<cv::Point3f> obj_pt;
     for(int i = 0; i < board_size.height; i++) {
@@ -125,9 +129,11 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
         }
     }
 
+    cv::Size img_size; // Stores size of images being analyzed
+    std::vector<std::string> l_files, r_files;
     // Read list of images from xml file
     cv::FileStorage fs(xml_file, cv::FileStorage::READ);
-    std::vector<std::string> l_files, r_files;
+    fs["image_size"] >> img_size;
     fs["left_images"] >> l_files;
     fs["right_images"] >> r_files;
     fs.release();
@@ -158,7 +164,6 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
             return;
         }
 
-        if(img_size.empty()) img_size = cv::Size(left_img.rows, left_img.cols);
         std::cout << "Analyzing " << l_files[i] << std::endl;
         std::cout << "Analyzing " << r_files[i] << std::endl;
 
@@ -166,6 +171,7 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
         imgCalibrationPts(right_img, board_size, obj_pt, r_obj_pts, r_img_pts);
     }
 
+    std::cout << "Calculating Individual Camera Calibration Data..." << std::endl;
     // Individual Camera Calibration //
 
     cv::Mat l_cameraMat, l_distCoeffs, l_R, l_T, l_stdDevInt, l_stdDevExt, l_viewErrors;
@@ -175,12 +181,15 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
     cv::calibrateCamera(r_obj_pts, r_img_pts, img_size, r_cameraMat, r_distCoeffs, r_R, r_T,
                         r_stdDevInt, r_stdDevExt, r_viewErrors);
 
+    std::cout << "Calculating Stereo Camera Calibration Data..." << std::endl;
     // Stereo Rectification //
 
     // l_obj_pts = r_obj_pts
     cv::Mat R, T, E, F, viewErrors;
     cv::stereoCalibrate(l_obj_pts, l_img_pts, r_img_pts, l_cameraMat, l_distCoeffs, r_cameraMat, r_distCoeffs,
-                        img_size, R, T, E, F, viewErrors);
+                        img_size, R, T, E, F, viewErrors, cv::CALIB_USE_INTRINSIC_GUESS +
+                        cv::CALIB_FIX_PRINCIPAL_POINT + cv::CALIB_FIX_ASPECT_RATIO,
+                        cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, 1e-5));
 
     cv::Mat l_rtR, l_rtP;
     cv::Mat r_rtR, r_rtP;
@@ -188,6 +197,7 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
     cv::stereoRectify(l_cameraMat, l_distCoeffs, r_cameraMat, r_distCoeffs, img_size, R, T, l_rtR, r_rtR,
                         l_rtP, r_rtP, Q);
 
+    std::cout << "Writing to " << xml_output << std::endl;
     // Save calibration values to xml file
     fs.open(xml_output, cv::FileStorage::WRITE);
     fs << "left_camera_matrix" << l_cameraMat;
@@ -214,9 +224,9 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
     fs << "left_rectification_projection_matrix" << l_rtP;
     fs << "right_rectification_projection_matrix" << r_rtP;
     fs << "disparity_to_depth_matrix" << Q;
-
     fs.release();
 
+    std::cout << "Applying Calibration Data..." << std::endl;
     applyStereoCalibration(xml_file, xml_output, img_size);
 }
 
