@@ -1,3 +1,0 @@
-/home/victor-m/ocv3_ws/src/opencv-projects/stereo_capture/CMakeFiles/rebuild_cache.dir
-/home/victor-m/ocv3_ws/src/opencv-projects/stereo_capture/CMakeFiles/edit_cache.dir
-/home/victor-m/ocv3_ws/src/opencv-projects/stereo_capture/CMakeFiles/stereo_capture.dir
