@@ -32,6 +32,7 @@ std::string gstreamerPipelineStr(int cap_width, int cap_height, int frame_rate, 
 // Stores relevent calibration values
 class StereoCalibration {
 private:
+    cv::Size size;
     cv::Mat l_cameraMat, l_distCoeffs;
     cv::Mat r_cameraMat, r_distCoeffs;
     cv::Mat l_rtR, l_rtP;
@@ -41,8 +42,9 @@ private:
     cv::Mat r_map1, r_map2;
 
 public:
-    StereoCalibration(std::string& xml_calib, cv::Size& size) {
+    StereoCalibration(std::string& xml_calib) {
         cv::FileStorage fs(xml_calib, cv::FileStorage::READ);
+        fs["image_size"] >> size;
         fs["left_camera_matrix"] >> l_cameraMat;
         fs["right_camera_matrix"] >> r_cameraMat;
         fs["left_dist_coeffs"] >> l_distCoeffs;
@@ -54,16 +56,13 @@ public:
         fs["disparity_to_depth_matrix"] >> Q;
         fs.release();
 
-        cv::Size new_size(size.height, size.width);
         cv::initUndistortRectifyMap(l_cameraMat, l_distCoeffs, l_rtR, l_rtP,
-                                        new_size, CV_16SC2, l_map1, l_map2);
+                                        size, CV_16SC2, l_map1, l_map2);
         cv::initUndistortRectifyMap(r_cameraMat, r_distCoeffs, r_rtR, r_rtP,
-                                        new_size, CV_16SC2, r_map1, r_map2);
+                                        size, CV_16SC2, r_map1, r_map2);
     }
 
     void applyCalibration(cv::Mat& left_img, cv::Mat& right_img, cv::Mat& left_dst, cv::Mat& right_dst) {
-        //cv::undistort(left_img, left_dst, l_cameraMat, l_distCoeffs);
-        //cv::undistort(right_img, right_dst, r_cameraMat, r_distCoeffs);
 
         cv::remap(left_img, left_dst, l_map1, l_map2, cv::INTER_LINEAR);
         cv::remap(right_img, right_dst, r_map1, r_map2, cv::INTER_LINEAR);
@@ -78,15 +77,13 @@ public:
 int main(int argc, char* argv[]) {
     // Print OpenCv build info
     std::cout << cv::getBuildInformation() << "\n" << std::endl;
-    int width = 1280;
-    int height = 720;
-    cv::Size size(height, width);
+    cv::Size size(std::stoi(argv[1]), std::stoi(argv[2]));
 
     // camera feed setup
-    std::string pipeline = gstreamerPipelineStr(width, height, 20, 0);
+    std::string pipeline = gstreamerPipelineStr(size.width, size.height, 20, 0);
     std::cout << "// Left Cam Pipeline // " << pipeline << " //" << std::endl;
     cv::VideoCapture left_cam(pipeline, cv::CAP_GSTREAMER);
-    pipeline = gstreamerPipelineStr(width, height, 20, 1);
+    pipeline = gstreamerPipelineStr(size.width, size.height, 20, 1);
     std::cout << "// Right Cam Pipeline // " << pipeline << " //" << std::endl;
     cv::VideoCapture right_cam(pipeline, cv::CAP_GSTREAMER);
 
@@ -100,11 +97,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Get stereo calibration data
-    std::string xml_calib = argv[1];
-    StereoCalibration calibrate(xml_calib, size);
+    std::string xml_calib = argv[3];
+    StereoCalibration calibrate(xml_calib);
 
     // Disparity Algorithm Parameters
-    int block_size = 30;
+    int block_size = 15;
     int min_disp = 0;
     int max_disp = 16;
     int num_disp = max_disp - min_disp;
@@ -144,12 +141,9 @@ int main(int argc, char* argv[]) {
         cv::cvtColor(right_frame, right_frame, cv::COLOR_BGR2GRAY);
         calibrate.applyCalibration(left_frame, right_frame, left_rFrame, right_rFrame);
 
-        // calculate disparity with StereoBM
+        // calculate disparity with StereoSGBM
         stereo->compute(left_rFrame, right_rFrame, disparity);
         //cv::reprojectImageTo3D(disparity, depth, Q); // project disparity map to 3D image
-
-        // conversions before display?
-        //disparity.convertTo(disparity32F, CV_8U, 1.0f);
 
         double min, max;
         cv::minMaxIdx(disparity, &min, &max);
