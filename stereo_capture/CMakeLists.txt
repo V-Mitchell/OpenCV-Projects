@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+project( stereo_capture )
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( stereo_capture stereo_capture.cpp )
+target_link_libraries( stereo_capture ${OpenCV_LIBS} )

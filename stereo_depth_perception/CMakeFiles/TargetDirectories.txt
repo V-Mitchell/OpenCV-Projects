@@ -1,3 +1,0 @@
-/home/victor-m/cv_ws/src/opencv-projects/stereo_depth_perception/CMakeFiles/rebuild_cache.dir
-/home/victor-m/cv_ws/src/opencv-projects/stereo_depth_perception/CMakeFiles/edit_cache.dir
-/home/victor-m/cv_ws/src/opencv-projects/stereo_depth_perception/CMakeFiles/stereo_depth_perception.dir

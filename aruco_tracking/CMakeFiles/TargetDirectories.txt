@@ -1,3 +1,0 @@
-/home/victor-m/cv_ws/src/aruco_tracking/CMakeFiles/rebuild_cache.dir
-/home/victor-m/cv_ws/src/aruco_tracking/CMakeFiles/edit_cache.dir
-/home/victor-m/cv_ws/src/aruco_tracking/CMakeFiles/aruco_tracking.dir
