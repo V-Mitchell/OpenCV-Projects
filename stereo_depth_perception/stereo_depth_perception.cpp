@@ -17,15 +17,16 @@
 
 std::string gstreamerPipelineStr(int cap_width, int cap_height, int frame_rate, int cap_id) {
     return "nvarguscamerasrc sensor-id=" + std::to_string(cap_id)
-        + " exposuretimerange='" + std::to_string(13000) + " " + std::to_string(100000) + "' aelock=false"
-        + " gainrange='" + std::to_string(1) + " " + std::to_string(5) + "'"
+        + " exposuretimerange='" + std::to_string(13000) + " " + std::to_string(100000000) + "' aelock=false"
+        + " gainrange='" + std::to_string(1) + " " + std::to_string(10) + "'"
         + " ispdigitalgainrange='" + std::to_string(1) + " " + std::to_string(1) + "'"
         + " aeantibanding=" + std::to_string(0) + " tnr-mode=" + std::to_string(1)
         + " tnr-strength=" + std::to_string(0.5) + " ee-mode=" + std::to_string(0)
         + " ee-strength=" + std::to_string(0.5)
         + " ! video/x-raw(memory:NVMM), width=" + std::to_string(cap_width)
         + ", height=" + std::to_string(cap_height) + ", format=(string)NV12, "
-        + "framerate=(fraction)" + std::to_string(frame_rate) + "/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! "
+        + "framerate=(fraction)" + std::to_string(frame_rate) + "/1 ! nvvidconv flip-method=0"
+        + " ! video/x-raw, width =" + std::to_string(cap_width) + ", height=" + std::to_string(cap_height) + ", format=(string)BGRx ! "
         + "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
 }
 
@@ -63,7 +64,6 @@ public:
     }
 
     void applyCalibration(cv::Mat& left_img, cv::Mat& right_img, cv::Mat& left_dst, cv::Mat& right_dst) {
-
         cv::remap(left_img, left_dst, l_map1, l_map2, cv::INTER_LINEAR);
         cv::remap(right_img, right_dst, r_map1, r_map2, cv::INTER_LINEAR);
     }
@@ -100,25 +100,37 @@ int main(int argc, char* argv[]) {
     std::string xml_calib = argv[3];
     StereoCalibration calibrate(xml_calib);
 
-    // Disparity Algorithm Parameters
-    int block_size = 15;
+    cv::Mat left_frame, right_frame;
+
+    // Sample Image
+    bool left_success = left_cam.read(left_frame);
+    bool right_success = right_cam.read(right_frame);
+    if (!left_success) {
+        std::cout << "Left Camera Disconnected - Cannot read frame" << std::endl;
+        return 0;
+    }
+    if (!right_success) {
+        std::cout << "Right Camera Disconnected - Cannot read frame" << std::endl;
+        return 0;
+    }
+
+    // Disparity Algorithm Setup
+    int block_size = 3;
     int min_disp = 0;
     int max_disp = 16;
     int num_disp = max_disp - min_disp;
-    int uniqueness_ratio = 5;
-    int speckle_range = 2;
-    int speckle_window_size = 5;
-    int disp12_max_diff = 2;
+    int cn = left_frame.channels();
     
     cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create(min_disp, num_disp, block_size);
-    //stereo->setUniquenessRatio(uniqueness_ratio);
-    //stereo->setSpeckleWindowSize(speckle_window_size);
-    //stereo->setDisp12MaxDiff(disp12_max_diff);
-    //stereo->setP1(8 * 3 * block_size * block_size);
-    //stereo->setP2(32 * 3 * block_size * block_size);
-
-
-    cv::Mat left_frame, right_frame;
+    stereo->setPreFilterCap(63);
+    stereo->setP1(8 * cn * block_size * block_size);
+    stereo->setP2(32 * cn * block_size * block_size);
+    stereo->setUniquenessRatio(10);
+    stereo->setSpeckleWindowSize(100);
+    stereo->setSpeckleRange(32);
+    stereo->setDisp12MaxDiff(1);
+    stereo->setMode(cv::StereoSGBM::MODE_SGBM);
+    
     cv::Mat left_rFrame, right_rFrame;
     cv::Mat disparity, depth;
     cv::Mat Q;

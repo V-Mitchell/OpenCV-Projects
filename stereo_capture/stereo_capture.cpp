@@ -15,14 +15,15 @@
 std::string gstreamerPipelineStr(int cap_width, int cap_height, int frame_rate, int cap_id) {
     return "nvarguscamerasrc sensor-id=" + std::to_string(cap_id)
         + " exposuretimerange='" + std::to_string(13000) + " " + std::to_string(100000000) + "' aelock=false"
-        + " gainrange='" + std::to_string(1) + " " + std::to_string(5) + "'"
+        + " gainrange='" + std::to_string(1) + " " + std::to_string(10) + "'"
         + " ispdigitalgainrange='" + std::to_string(1) + " " + std::to_string(1) + "'"
         + " aeantibanding=" + std::to_string(0) + " tnr-mode=" + std::to_string(1)
         + " tnr-strength=" + std::to_string(0.5) + " ee-mode=" + std::to_string(0)
         + " ee-strength=" + std::to_string(0.5)
         + " ! video/x-raw(memory:NVMM), width=" + std::to_string(cap_width)
         + ", height=" + std::to_string(cap_height) + ", format=(string)NV12, "
-        + "framerate=(fraction)" + std::to_string(frame_rate) + "/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! "
+        + "framerate=(fraction)" + std::to_string(frame_rate) + "/1 ! nvvidconv flip-method=0"
+        + " ! video/x-raw, width =" + std::to_string(cap_width) + ", height=" + std::to_string(cap_height) + ", format=(string)BGRx ! "
         + "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
 }
 

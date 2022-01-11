@@ -22,7 +22,7 @@ void imgCalibrationPts( cv::Mat& img, cv::Size board_size,
                         std::vector<std::vector<cv::Point2f> >& img_pts) {
 
     std::vector<cv::Point2f> corners; // stores detected corners of checkerboard
-    bool found = cv::findChessboardCorners(img, board_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
+    bool found = cv::findChessboardCorners(img, board_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
 
     if (found) {
         cv::cornerSubPix(   img, corners, cv::Size(11, 11), cv::Size(-1, -1), 
@@ -34,13 +34,13 @@ void imgCalibrationPts( cv::Mat& img, cv::Size board_size,
             std::cout << "Image Empty" << std::endl;
             return;
         }
+        // uncomment below to show detected saddle points
         //cv::imshow("detected corners", draw);
         //cv::waitKey(); // wait till user presses key
 
         obj_pts.push_back(obj_pt);
         img_pts.push_back(corners);
     }
-
 }
 
 void applyStereoCalibration(std::string& xml_file, std::string& xml_calib, cv::Size& img_size) {
@@ -105,11 +105,10 @@ void applyStereoCalibration(std::string& xml_file, std::string& xml_calib, cv::S
         cv::remap(left_img, left_rimg, l_map1, l_map2, cv::INTER_LINEAR);
         cv::remap(right_img, right_rimg, r_map1, r_map2, cv::INTER_LINEAR);
 
-        cv::imshow("original", left_img);
-        cv::imshow("remapped", left_rimg);
-        cv::waitKey();
-        cv::imshow("original", right_img);
-        cv::imshow("remapped", right_rimg);
+        cv::imshow("left - original", left_img);
+        cv::imshow("left - remapped", left_rimg);
+        cv::imshow("right - original", right_img);
+        cv::imshow("right - remapped", right_rimg);
         cv::waitKey();
     }
 }
@@ -170,29 +169,35 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
 
     if ((l_obj_pts.size() != r_obj_pts.size()) || (l_img_pts.size() != r_img_pts.size())) {
         std::cout << "Detected points aren't matching" << std::endl;
+        return;
     }
 
-    std::cout << "Calculating Individual Camera Calibration Data..." << std::endl;
-    // Individual Camera Calibration //
+    std::cout << "Initializing Intrinsic Camera Calibration Data..." << std::endl;
+    // Intrinsic Camera Calibration //
 
     cv::Mat l_cameraMat, l_distCoeffs, l_R, l_T, l_stdDevInt, l_stdDevExt, l_viewErrors;
     cv::Mat r_cameraMat, r_distCoeffs, r_R, r_T, r_stdDevInt, r_stdDevExt, r_viewErrors;
-    cv::calibrateCamera(l_obj_pts, l_img_pts, img_size, l_cameraMat, l_distCoeffs, l_R, l_T,
-                        l_stdDevInt, l_stdDevExt, l_viewErrors);
-    cv::calibrateCamera(r_obj_pts, r_img_pts, img_size, r_cameraMat, r_distCoeffs, r_R, r_T,
-                        r_stdDevInt, r_stdDevExt, r_viewErrors);
+
+    l_cameraMat = cv::initCameraMatrix2D(l_obj_pts, l_img_pts, img_size);
+    r_cameraMat = cv::initCameraMatrix2D(r_obj_pts, r_img_pts, img_size);
     
 
-    std::cout << "Calculating Stereo Camera Calibration Data..." << std::endl;
+    std::cout << "Calculating Extrinsic Camera Calibration Data..." << std::endl;
     // Stereo Rectification //
 
-    // l_obj_pts = r_obj_pts
+    // note: l_obj_pts = r_obj_pts
     cv::Mat R, T, E, F, viewErrors;
-    cv::stereoCalibrate(l_obj_pts, l_img_pts, r_img_pts, l_cameraMat, l_distCoeffs, r_cameraMat, r_distCoeffs,
-                        img_size, R, T, E, F, viewErrors, cv::CALIB_USE_INTRINSIC_GUESS +
-                        cv::CALIB_FIX_PRINCIPAL_POINT + cv::CALIB_FIX_ASPECT_RATIO,
+    double rms = cv::stereoCalibrate(l_obj_pts, l_img_pts, r_img_pts, l_cameraMat, l_distCoeffs, r_cameraMat, r_distCoeffs,
+                        img_size, R, T, E, F, viewErrors, 
+                        cv::CALIB_USE_INTRINSIC_GUESS +
+                        cv::CALIB_FIX_ASPECT_RATIO +
+                        cv::CALIB_SAME_FOCAL_LENGTH +
+                        cv::CALIB_RATIONAL_MODEL +
+                        cv::CALIB_FIX_K3 + cv::CALIB_FIX_K4 + cv::CALIB_FIX_K5 +
+                        cv::CALIB_THIN_PRISM_MODEL,
                         cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, 1e-5));
 
+    std::cout << "RMS Error = " << rms << std::endl;
     cv::Mat l_rtR, l_rtP;
     cv::Mat r_rtR, r_rtP;
     cv::Mat Q;
