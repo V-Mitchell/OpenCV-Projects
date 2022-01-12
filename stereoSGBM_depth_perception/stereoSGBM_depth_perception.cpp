@@ -2,7 +2,7 @@
 *   Email: victorcmitchell@gmail.com
 *   Notes:  - Calculates a disparity map given calibration values passed via xml file
 *           passed from cmd line argument
-*           - StereoBM settings can be modifies in real time with track bars
+*           - StereoSGBM settings can be modifies in real time with track bars
 */
 
 #include <opencv2/core.hpp>
@@ -115,9 +115,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Disparity Algorithm Setup
-    int block_size = 3;
+    int block_size = 11;
     int min_disp = 0;
-    int max_disp = 16;
+    int max_disp = 64;
     int num_disp = max_disp - min_disp;
     int cn = left_frame.channels();
     

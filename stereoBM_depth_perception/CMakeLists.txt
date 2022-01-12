@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.8)
+project( stereoBM_depth_perception )
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( stereoBM_depth_perception stereoBM_depth_perception.cpp )
+target_link_libraries( stereoBM_depth_perception ${OpenCV_LIBS} )

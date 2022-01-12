@@ -6,13 +6,14 @@
             - Calibration values saved to file passed in last cmd line argument
 */
 
-#include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/opencv.hpp>
+#include <opencv4/opencv2/calib3d/calib3d.hpp>
+#include <opencv4/opencv2/calib3d/calib3d_c.h>
+#include <opencv4/opencv2/imgproc/imgproc.hpp>
+#include <opencv4/opencv2/highgui/highgui.hpp>
+#include <opencv4/opencv2/imgcodecs.hpp>
+#include <opencv4/opencv2/core/types_c.h>
 #include <iostream>
 #include <stdio.h>
 
@@ -23,7 +24,7 @@ void imgCalibrationPts( cv::Mat& img, cv::Size board_size,
 
     std::vector<cv::Point2f> corners; // stores detected corners of checkerboard
     bool found = cv::findChessboardCorners(img, board_size, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE);
-
+    
     if (found) {
         cv::cornerSubPix(   img, corners, cv::Size(11, 11), cv::Size(-1, -1), 
                             cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
@@ -201,8 +202,9 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
     cv::Mat l_rtR, l_rtP;
     cv::Mat r_rtR, r_rtP;
     cv::Mat Q;
+    cv::Rect roi1, roi2;
     cv::stereoRectify(l_cameraMat, l_distCoeffs, r_cameraMat, r_distCoeffs, img_size, R, T, l_rtR, r_rtR,
-                        l_rtP, r_rtP, Q);
+                        l_rtP, r_rtP, Q, cv::CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
 
     std::cout << "Writing to " << xml_output << std::endl;
     // Save calibration values to xml file
@@ -232,6 +234,8 @@ void calibrateStereoCamera(std::string& xml_file, cv::Size& board_size, std::str
     fs << "left_rectification_projection_matrix" << l_rtP;
     fs << "right_rectification_projection_matrix" << r_rtP;
     fs << "disparity_to_depth_matrix" << Q;
+    fs << "valid_pix_ROI1" << roi1;
+    fs << "valid_pix_ROI2" << roi2;
     fs.release();
 
     std::cout << "Applying Calibration Data..." << std::endl;
